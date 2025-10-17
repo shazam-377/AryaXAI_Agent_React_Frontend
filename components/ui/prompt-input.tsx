@@ -1,0 +1,167 @@
+'use client';
+
+import * as React from 'react';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Send, Loader2 } from 'lucide-react';
+
+interface PromptInputContextValue {
+  value: string;
+  onValueChange: (value: string) => void;
+  isLoading: boolean;
+  onSubmit: () => void;
+}
+
+const PromptInputContext = React.createContext<PromptInputContextValue | null>(
+  null
+);
+
+function usePromptInput() {
+  const context = React.useContext(PromptInputContext);
+  if (!context) {
+    throw new Error('usePromptInput must be used within a PromptInput');
+  }
+  return context;
+}
+
+interface PromptInputProps {
+  value: string;
+  onValueChange: (value: string) => void;
+  onSubmit: () => void;
+  isLoading?: boolean;
+  maxHeight?: number | string;
+  children: React.ReactNode;
+  className?: string;
+}
+
+export function PromptInput({
+  value,
+  onValueChange,
+  onSubmit,
+  isLoading = false,
+  maxHeight = 240,
+  children,
+  className,
+}: PromptInputProps) {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isLoading && value.trim()) {
+      onSubmit();
+    }
+  };
+
+  return (
+    <PromptInputContext.Provider
+      value={{ value, onValueChange, isLoading, onSubmit }}
+    >
+      <form
+        onSubmit={handleSubmit}
+        className={cn(
+          'relative flex items-end gap-2 rounded-lg border bg-background p-2',
+          className
+        )}
+        style={{ maxHeight }}
+      >
+        {children}
+      </form>
+    </PromptInputContext.Provider>
+  );
+}
+
+interface PromptInputTextareaProps
+  extends Omit<React.ComponentProps<'textarea'>, 'value' | 'onChange'> {
+  disableAutosize?: boolean;
+}
+
+export function PromptInputTextarea({
+  className,
+  disableAutosize = false,
+  onKeyDown,
+  disabled,
+  ...props
+}: PromptInputTextareaProps) {
+  const { value, onValueChange, isLoading, onSubmit } = usePromptInput();
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea
+  React.useEffect(() => {
+    if (!disableAutosize && textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [value, disableAutosize]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (!isLoading && value.trim()) {
+        onSubmit();
+      }
+    }
+    onKeyDown?.(e);
+  };
+
+  return (
+    <textarea
+      ref={textareaRef}
+      value={value}
+      onChange={(e) => onValueChange(e.target.value)}
+      onKeyDown={handleKeyDown}
+      disabled={disabled || isLoading}
+      className={cn(
+        'flex-1 resize-none bg-transparent text-sm placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+        'min-h-[40px] max-h-[200px]',
+        className
+      )}
+      rows={1}
+      {...props}
+    />
+  );
+}
+
+interface PromptInputSubmitProps {
+  disabled?: boolean;
+  className?: string;
+}
+
+export function PromptInputSubmit({
+  disabled,
+  className,
+}: PromptInputSubmitProps) {
+  const { isLoading, value } = usePromptInput();
+
+  return (
+    <Button
+      type="submit"
+      size="icon"
+      disabled={disabled || isLoading || !value.trim()}
+      className={cn('h-9 w-9 shrink-0', className)}
+    >
+      {isLoading ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Send className="h-4 w-4" />
+      )}
+    </Button>
+  );
+}
+
+interface PromptInputActionsProps extends React.HTMLAttributes<HTMLDivElement> {
+  children: React.ReactNode;
+}
+
+export function PromptInputActions({
+  children,
+  className,
+  ...props
+}: PromptInputActionsProps) {
+  return (
+    <div
+      className={cn('flex items-center gap-1', className)}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+}
