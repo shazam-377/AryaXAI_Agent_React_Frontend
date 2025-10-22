@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: aryaxai-agent
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NEXT_PUBLIC_API_HTTP_URL
+        value: https://your-backend-url.onrender.com
+      - key: NEXT_PUBLIC_API_WS_URL
+        value: wss://your-backend-url.onrender.com/ws/chat
