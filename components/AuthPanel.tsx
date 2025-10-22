@@ -115,10 +115,13 @@ export default function AuthPanel({
 
     const fetchOrganizations = async () => {
       try {
+        console.log('Fetching organizations for token:', token);
         const response = await fetch(
           `${API_HTTP_URL}/organizations?token=${token}`
         );
+        console.log('Response status:', response.status);
         const data = await response.json();
+        console.log('Organizations received:', data.organizations);
         setOrganizations(data.organizations || []);
       } catch (error) {
         console.error('Error fetching organizations:', error);
