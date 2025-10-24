@@ -1,10 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Send, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface PromptInputContextValue {
   value: string;
@@ -30,7 +28,6 @@ interface PromptInputProps {
   onValueChange: (value: string) => void;
   onSubmit: () => void;
   isLoading?: boolean;
-  maxHeight?: number | string;
   children: React.ReactNode;
   className?: string;
 }
@@ -40,7 +37,6 @@ export function PromptInput({
   onValueChange,
   onSubmit,
   isLoading = false,
-  maxHeight = 240,
   children,
   className,
 }: PromptInputProps) {
@@ -58,10 +54,9 @@ export function PromptInput({
       <form
         onSubmit={handleSubmit}
         className={cn(
-          'relative flex items-end gap-2 rounded-lg border bg-background p-2',
+          'relative flex flex-col rounded-2xl border bg-background p-3 shadow-sm',
           className
         )}
-        style={{ maxHeight }}
       >
         {children}
       </form>
@@ -111,39 +106,12 @@ export function PromptInputTextarea({
       disabled={disabled || isLoading}
       className={cn(
         'flex-1 resize-none bg-transparent text-sm placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50',
-        'min-h-[40px] max-h-[200px]',
+        'min-h-[52px] max-h-[200px] leading-relaxed',
         className
       )}
       rows={1}
       {...props}
     />
-  );
-}
-
-interface PromptInputSubmitProps {
-  disabled?: boolean;
-  className?: string;
-}
-
-export function PromptInputSubmit({
-  disabled,
-  className,
-}: PromptInputSubmitProps) {
-  const { isLoading, value } = usePromptInput();
-
-  return (
-    <Button
-      type="submit"
-      size="icon"
-      disabled={disabled || isLoading || !value.trim()}
-      className={cn('h-9 w-9 shrink-0', className)}
-    >
-      {isLoading ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <Send className="h-4 w-4" />
-      )}
-    </Button>
   );
 }
 
@@ -158,10 +126,15 @@ export function PromptInputActions({
 }: PromptInputActionsProps) {
   return (
     <div
-      className={cn('flex items-center gap-1', className)}
+      className={cn('flex items-center gap-2', className)}
       {...props}
     >
       {children}
     </div>
   );
+}
+
+// Legacy component for compatibility
+export function PromptInputSubmit() {
+  return null;
 }

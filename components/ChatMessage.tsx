@@ -100,203 +100,201 @@ export default function ChatMessage({
   return (
     <div className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-4 duration-300`}>
       {!isUser && (
-        <div className="flex-shrink-0">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
-            <Bot className="w-6 h-6 text-white" />
-          </div>
+      <div className="flex-shrink-0 pt-1">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md">
+          <Bot className="w-5 h-5 text-white" />
         </div>
-      )}
+      </div>
+    )}
 
       <div className={`flex-1 max-w-[85%] ${isUser ? 'flex flex-col items-end' : ''}`}>
-        <Card className={`${
-          isUser 
-            ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-0 shadow-lg' 
-            : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md'
-        } transition-all duration-200 hover:shadow-xl`}>
-          <CardContent className="p-4">
-            {isUser ? (
-              <p className="text-sm leading-relaxed">{message.content}</p>
-            ) : (
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                {isStreaming ? (
-                  <div className="whitespace-pre-wrap break-words">
-                    {displayedContent}
-                    <span className="inline-block w-2 h-4 ml-1 bg-indigo-500 animate-pulse" />
-                  </div>
-                ) : (
-                  <Markdown className="text-sm">
-                    {displayedContent}
-                  </Markdown>
-                )}
+        {isUser ? (
+          <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-3 max-w-fit">
+            <p className="text-sm leading-relaxed text-slate-900 dark:text-slate-100">
+              {message.content}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              {isStreaming ? (
+                <div className="whitespace-pre-wrap break-words">
+                  {displayedContent}
+                  <span className="inline-block w-2 h-4 ml-1 bg-indigo-500 animate-pulse" />
+                </div>
+              ) : (
+                <Markdown className="text-sm">
+                  {displayedContent}
+                </Markdown>
+              )}
+            </div>
+
+            {/* Metadata */}
+            {message.metadata && (
+              <div className="flex gap-2 mt-2 text-xs flex-wrap">
+                <Badge variant="secondary" className="flex items-center gap-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
+                  Execution time: {message.metadata.execution_time?.toFixed(2)}s
+                </Badge>
+                <Badge variant="secondary" className="flex items-center gap-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
+                  Total tokens: {message.metadata.total_tokens}
+                </Badge>
+                <Badge variant="secondary" className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
+                  Input tokens: {message.metadata.input_tokens}
+                </Badge>
+                <Badge variant="secondary" className="flex items-center gap-1 bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300">
+                  Output tokens: {message.metadata.output_tokens}
+                </Badge>
               </div>
             )}
-          </CardContent>
-        </Card>
 
-        {/* Metadata */}
-        {message.metadata && (
-          <div className="flex gap-2 mt-2 text-xs flex-wrap">
-            <Badge variant="secondary" className="flex items-center gap-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
-              Execution time: {message.metadata.execution_time?.toFixed(2)}s
-            </Badge>
-            <Badge variant="secondary" className="flex items-center gap-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
-              total tokens: {message.metadata.total_tokens}
-            </Badge>
-            <Badge variant="secondary" className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
-              input tokens: {message.metadata.input_tokens}
-            </Badge>
-            <Badge variant="secondary" className="flex items-center gap-1 bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300">
-              output tokens: {message.metadata.output_tokens}
-            </Badge>
-          </div>
-        )}
-
-        {/* Agent Execution Details */}
-        {(message.scratchpad || message.tool_response) && (
-          <Collapsible
-            open={isDetailsOpen}
-            onOpenChange={setIsDetailsOpen}
-            className="mt-2 w-full"
-          >
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full justify-between hover:bg-indigo-50 dark:hover:bg-indigo-950">
-                <span className="text-xs">Agent Execution Details</span>
-                {isDetailsOpen ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <Card className="mt-2 border-indigo-200 dark:border-indigo-800">
-                <CardContent className="p-4">
-                  <Tabs defaultValue={message.scratchpad ? 'planning' : 'tools'}>
-                    <TabsList className="grid w-full grid-cols-2">
-                      {message.scratchpad && (
-                        <TabsTrigger value="planning">Agent Planning</TabsTrigger>
-                      )}
-                      {message.tool_response && (
-                        <TabsTrigger value="tools">Tool Executions</TabsTrigger>
-                      )}
-                    </TabsList>
-
-                    {message.scratchpad && (
-                      <TabsContent value="planning" className="space-y-2">
-                        <h4 className="font-semibold text-sm">Agent's Planning Variables:</h4>
-                        {Object.entries(message.scratchpad).map(([key, value]) => (
-                          <div key={key} className="space-y-1">
-                            <p className="font-medium text-sm">{key}:</p>
-                            <pre className="text-xs bg-muted p-2 rounded overflow-auto">
-                              {typeof value === 'object'
-                                ? JSON.stringify(value, null, 2)
-                                : String(value)}
-                            </pre>
-                          </div>
-                        ))}
-                      </TabsContent>
+            {/* Agent Execution Details */}
+            {(message.scratchpad || message.tool_response) && (
+              <Collapsible
+                open={isDetailsOpen}
+                onOpenChange={setIsDetailsOpen}
+                className="mt-2 w-full"
+              >
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full justify-between hover:bg-indigo-50 dark:hover:bg-indigo-950">
+                    <span className="text-xs">Agent Execution Details</span>
+                    {isDetailsOpen ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
                     )}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <Card className="mt-2 border-indigo-200 dark:border-indigo-800">
+                    <CardContent className="p-4">
+                      <Tabs defaultValue={message.scratchpad ? 'planning' : 'tools'}>
+                        <TabsList className="grid w-full grid-cols-2">
+                          {message.scratchpad && (
+                            <TabsTrigger value="planning">Agent Planning</TabsTrigger>
+                          )}
+                          {message.tool_response && (
+                            <TabsTrigger value="tools">Tool Executions</TabsTrigger>
+                          )}
+                        </TabsList>
 
-                    {message.tool_response && (
-                      <TabsContent value="tools" className="space-y-4">
-                        {typeof message.tool_response === 'object' && (
-                          <>
-                            {/* Display summary metrics at the top */}
-                            <div className="grid grid-cols-2 gap-2">
-                              <Card>
-                                <CardContent className="p-3">
-                                  <p className="text-xs text-muted-foreground">Total Executions</p>
-                                  <p className="text-2xl font-bold">
-                                    {message.tool_response.total_executions || 0}
-                                  </p>
-                                </CardContent>
-                              </Card>
-                              <Card>
-                                <CardContent className="p-3">
-                                  <p className="text-xs text-muted-foreground">Messages</p>
-                                  <p className="text-2xl font-bold">
-                                    {message.tool_response.conversation_length || 0}
-                                  </p>
-                                </CardContent>
-                              </Card>
-                            </div>
-
-                            {/* Display individual tool executions */}
-                            {message.tool_response.tool_executions && message.tool_response.tool_executions.length > 0 ? (
-                              <div className="space-y-4">
-                                {message.tool_response.tool_executions
-                                  .slice()
-                                  .reverse()
-                                  .map((execution: any, i: number) => (
-                                    <ToolExecutionCard
-                                      key={i}
-                                      execution={execution}
-                                      index={i + 1}
-                                    />
-                                  ))}
+                        {message.scratchpad && (
+                          <TabsContent value="planning" className="space-y-2">
+                            <h4 className="font-semibold text-sm">Agent's Planning Variables:</h4>
+                            {Object.entries(message.scratchpad).map(([key, value]) => (
+                              <div key={key} className="space-y-1">
+                                <p className="font-medium text-sm">{key}:</p>
+                                <pre className="text-xs bg-muted p-2 rounded overflow-auto">
+                                  {typeof value === 'object'
+                                    ? JSON.stringify(value, null, 2)
+                                    : String(value)}
+                                </pre>
                               </div>
-                            ) : (
-                              <p className="text-sm text-muted-foreground">No tool executions recorded</p>
-                            )}
-                          </>
+                            ))}
+                          </TabsContent>
                         )}
-                      </TabsContent>
-                    )}
-                  </Tabs>
-                </CardContent>
-              </Card>
-            </CollapsibleContent>
-          </Collapsible>
-        )}
 
-        {/* Feedback buttons - moved to bottom, only show for last assistant message */}
-        {!isUser && isLastMessage && !isStreaming && message.sessionId && (
-          <div className="mt-3 w-full">
-            {!feedbackGiven ? (
-              <div className="flex gap-2 items-center justify-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-                <span className="text-xs text-muted-foreground">Was this response helpful?</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleFeedback(true)}
-                  disabled={isSubmittingFeedback}
-                  className="hover:bg-green-100 dark:hover:bg-green-900 transition-colors"
-                >
-                  <ThumbsUp className="h-4 w-4 text-green-600 dark:text-green-400" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleFeedback(false)}
-                  disabled={isSubmittingFeedback}
-                  className="hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
-                >
-                  <ThumbsDown className="h-4 w-4 text-red-600 dark:text-red-400" />
-                </Button>
-              </div>
-            ) : showThankYou && (
-              <div className="flex items-center justify-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <p className="text-xs text-green-600 dark:text-green-400 font-medium">
-                  ✓ Thank you for sharing your feedback!
-                </p>
+                        {message.tool_response && (
+                          <TabsContent value="tools" className="space-y-4">
+                            {typeof message.tool_response === 'object' && (
+                              <>
+                                {/* Display summary metrics at the top */}
+                                <div className="grid grid-cols-2 gap-2">
+                                  <Card>
+                                    <CardContent className="p-3">
+                                      <p className="text-xs text-muted-foreground">Total Executions</p>
+                                      <p className="text-2xl font-bold">
+                                        {message.tool_response.total_executions || 0}
+                                      </p>
+                                    </CardContent>
+                                  </Card>
+                                  <Card>
+                                    <CardContent className="p-3">
+                                      <p className="text-xs text-muted-foreground">Messages</p>
+                                      <p className="text-2xl font-bold">
+                                        {message.tool_response.conversation_length || 0}
+                                      </p>
+                                    </CardContent>
+                                  </Card>
+                                </div>
+
+                                {/* Display individual tool executions */}
+                                {message.tool_response.tool_executions && message.tool_response.tool_executions.length > 0 ? (
+                                  <div className="space-y-4">
+                                    {message.tool_response.tool_executions
+                                      .slice()
+                                      .reverse()
+                                      .map((execution: any, i: number) => (
+                                        <ToolExecutionCard
+                                          key={i}
+                                          execution={execution}
+                                          index={i + 1}
+                                        />
+                                      ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-muted-foreground">No tool executions recorded</p>
+                                )}
+                              </>
+                            )}
+                          </TabsContent>
+                        )}
+                      </Tabs>
+                    </CardContent>
+                  </Card>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
+
+            {/* Feedback buttons - moved to bottom, only show for last assistant message */}
+            {!isUser && isLastMessage && !isStreaming && message.sessionId && (
+              <div className="mt-3 w-full">
+                {!feedbackGiven ? (
+                  <div className="flex gap-2 items-center justify-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <span className="text-xs text-muted-foreground">Was this response helpful?</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleFeedback(true)}
+                      disabled={isSubmittingFeedback}
+                      className="hover:bg-green-100 dark:hover:bg-green-900 transition-colors"
+                    >
+                      <ThumbsUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleFeedback(false)}
+                      disabled={isSubmittingFeedback}
+                      className="hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
+                    >
+                      <ThumbsDown className="h-4 w-4 text-red-600 dark:text-red-400" />
+                    </Button>
+                  </div>
+                ) : showThankYou && (
+                  <div className="flex items-center justify-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                      ✓ Thank you for sharing your feedback!
+                    </p>
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
       </div>
 
       {isUser && (
-        <div className="flex-shrink-0">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center shadow-lg">
-            <User className="w-6 h-6 text-white" />
-          </div>
+      <div className="flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-slate-400 dark:bg-slate-600 flex items-center justify-center shadow-md">
+          <User className="w-5 h-5 text-white" />
         </div>
-      )}
+      </div>
+    )}
     </div>
   );
 }
 
-// Tool Execution Card Component (unchanged)
+// Tool Execution Card Component
 function ToolExecutionCard({ execution, index }: { execution: any; index: number }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const toolCall = execution.tool_call || {};

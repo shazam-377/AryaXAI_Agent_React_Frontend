@@ -9,7 +9,8 @@ import {
   PromptInputSubmit,
 } from '@/components/ui/prompt-input';
 import ChatMessage from '@/components/ChatMessage';
-import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Loader2, ArrowUp, Square } from 'lucide-react';
 
 const API_WS_URL = process.env.NEXT_PUBLIC_API_WS_URL;
 
@@ -172,7 +173,7 @@ export default function ChatInterface({
   };
 
   return (
-    <Card className="shadow-2xl border-2 border-indigo-100 dark:border-indigo-900 h-[calc(100vh-280px)] flex flex-col bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+    <Card className="shadow-2xl border-2 border-indigo-100 dark:border-indigo-900 h-[calc(100vh-180px)] flex flex-col bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
       <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
         <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
           <div className="space-y-4 max-w-4xl mx-auto">
@@ -208,23 +209,40 @@ export default function ChatInterface({
         </ScrollArea>
 
         <div className="border-t bg-white dark:bg-slate-900 p-4">
-          <div className="max-w-4xl mx-auto">
-            <PromptInput
-              value={inputValue}
-              onValueChange={setInputValue}
-              onSubmit={handleSubmit}
-              isLoading={isLoading}
-            >
-              <PromptInputTextarea
-                placeholder="Type your message here..."
-                disabled={isLoading}
-                className="min-h-[60px] resize-none"
-              />
-              <PromptInputSubmit disabled={isLoading || !inputValue.trim()} />
-            </PromptInput>
-          </div>
-        </div>
+  <div className="max-w-4xl mx-auto">
+    <PromptInput
+      value={inputValue}
+      onValueChange={setInputValue}
+      onSubmit={handleSubmit}
+      isLoading={isLoading}
+      className="rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
+    >
+      <PromptInputTextarea
+        placeholder="Ask me anything about the AryaXAI platform..."
+        disabled={isLoading}
+      />
+      <div className="flex justify-end pt-2 pr-2 pb-2">
+        <Button
+          variant="default"
+          size="icon"
+          className="h-8 w-8 rounded-full bg-indigo-600 hover:bg-indigo-700"
+          disabled={isLoading || !inputValue.trim()}
+          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+            e.preventDefault();
+            handleSubmit();
+          }}
+        >
+          {isLoading ? (
+            <Square className="h-4 w-4 fill-current" />
+          ) : (
+            <ArrowUp className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
+    </PromptInput>
+  </div>
+</div>
       </CardContent>
-    </Card>
+    </Card> 
   );
 }
