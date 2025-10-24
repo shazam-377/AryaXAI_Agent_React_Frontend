@@ -11,12 +11,15 @@ import {
 } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronUp, User, Bot } from 'lucide-react';
+import { ChevronDown, ChevronUp, User, Bot, ThumbsUp, ThumbsDown } from 'lucide-react';
+
+const API_HTTP_URL = process.env.NEXT_PUBLIC_API_HTTP_URL;
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  sessionId?: string;
   metadata?: {
     execution_time?: number;
     total_tokens?: number;
@@ -30,11 +33,21 @@ interface Message {
 interface ChatMessageProps {
   message: Message;
   isStreaming?: boolean;
+  isLastMessage?: boolean;
+  token: string;
 }
 
-export default function ChatMessage({ message, isStreaming }: ChatMessageProps) {
+export default function ChatMessage({ 
+  message, 
+  isStreaming, 
+  isLastMessage,
+  token 
+}: ChatMessageProps) {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [displayedContent, setDisplayedContent] = useState('');
+  const [feedbackGiven, setFeedbackGiven] = useState(false);
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [showThankYou, setShowThankYou] = useState(false);
   const contentRef = useRef(message.content);
 
   const isUser = message.role === 'user';
@@ -48,6 +61,41 @@ export default function ChatMessage({ message, isStreaming }: ChatMessageProps) 
       setDisplayedContent(message.content);
     }
   }, [message.content, isStreaming]);
+
+  const handleFeedback = async (like: boolean) => {
+    if (!message.sessionId || isSubmittingFeedback) return;
+
+    setIsSubmittingFeedback(true);
+
+    try {
+      const response = await fetch(`${API_HTTP_URL}/update-like-agent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: message.sessionId,
+          like: like,
+        }),
+      });
+
+      if (response.ok) {
+        setFeedbackGiven(true);
+        setShowThankYou(true);
+        
+        // Fade out thank you message after 3 seconds
+        setTimeout(() => {
+          setShowThankYou(false);
+        }, 3000);
+      } else {
+        console.error('Failed to submit feedback');
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
 
   return (
     <div className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-4 duration-300`}>
@@ -89,21 +137,21 @@ export default function ChatMessage({ message, isStreaming }: ChatMessageProps) 
         {message.metadata && (
           <div className="flex gap-2 mt-2 text-xs flex-wrap">
             <Badge variant="secondary" className="flex items-center gap-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
-              ⏱️ Execution time: {message.metadata.execution_time?.toFixed(2)}s
+              Execution time: {message.metadata.execution_time?.toFixed(2)}s
             </Badge>
             <Badge variant="secondary" className="flex items-center gap-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
-              🪙 Total tokens: {message.metadata.total_tokens}
+              total tokens: {message.metadata.total_tokens}
             </Badge>
             <Badge variant="secondary" className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
-              📥 Output tokens: {message.metadata.input_tokens}
+              input tokens: {message.metadata.input_tokens}
             </Badge>
             <Badge variant="secondary" className="flex items-center gap-1 bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300">
-              📤 Input Tokens: {message.metadata.output_tokens}
+              output tokens: {message.metadata.output_tokens}
             </Badge>
           </div>
         )}
 
-        {/* Agent Execution Details - FULLY RESTORED */}
+        {/* Agent Execution Details */}
         {(message.scratchpad || message.tool_response) && (
           <Collapsible
             open={isDetailsOpen}
@@ -112,7 +160,7 @@ export default function ChatMessage({ message, isStreaming }: ChatMessageProps) 
           >
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm" className="w-full justify-between hover:bg-indigo-50 dark:hover:bg-indigo-950">
-                <span className="text-xs">🔍 Agent Execution Details</span>
+                <span className="text-xs">Agent Execution Details</span>
                 {isDetailsOpen ? (
                   <ChevronUp className="h-4 w-4" />
                 ) : (
@@ -126,10 +174,10 @@ export default function ChatMessage({ message, isStreaming }: ChatMessageProps) 
                   <Tabs defaultValue={message.scratchpad ? 'planning' : 'tools'}>
                     <TabsList className="grid w-full grid-cols-2">
                       {message.scratchpad && (
-                        <TabsTrigger value="planning">🧠 Agent Planning</TabsTrigger>
+                        <TabsTrigger value="planning">Agent Planning</TabsTrigger>
                       )}
                       {message.tool_response && (
-                        <TabsTrigger value="tools">🛠️ Tool Executions</TabsTrigger>
+                        <TabsTrigger value="tools">Tool Executions</TabsTrigger>
                       )}
                     </TabsList>
 
@@ -200,6 +248,41 @@ export default function ChatMessage({ message, isStreaming }: ChatMessageProps) 
             </CollapsibleContent>
           </Collapsible>
         )}
+
+        {/* Feedback buttons - moved to bottom, only show for last assistant message */}
+        {!isUser && isLastMessage && !isStreaming && message.sessionId && (
+          <div className="mt-3 w-full">
+            {!feedbackGiven ? (
+              <div className="flex gap-2 items-center justify-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                <span className="text-xs text-muted-foreground">Was this response helpful?</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleFeedback(true)}
+                  disabled={isSubmittingFeedback}
+                  className="hover:bg-green-100 dark:hover:bg-green-900 transition-colors"
+                >
+                  <ThumbsUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleFeedback(false)}
+                  disabled={isSubmittingFeedback}
+                  className="hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
+                >
+                  <ThumbsDown className="h-4 w-4 text-red-600 dark:text-red-400" />
+                </Button>
+              </div>
+            ) : showThankYou && (
+              <div className="flex items-center justify-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                  ✓ Thank you for sharing your feedback!
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {isUser && (
@@ -213,7 +296,7 @@ export default function ChatMessage({ message, isStreaming }: ChatMessageProps) 
   );
 }
 
-// Tool Execution Card Component
+// Tool Execution Card Component (unchanged)
 function ToolExecutionCard({ execution, index }: { execution: any; index: number }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const toolCall = execution.tool_call || {};

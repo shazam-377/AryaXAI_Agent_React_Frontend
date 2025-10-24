@@ -17,6 +17,7 @@ interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  sessionId?: string;
   metadata?: {
     execution_time?: number;
     total_tokens?: number;
@@ -80,6 +81,7 @@ export default function ChatInterface({
     let metadata: any = null;
     let scratchpad: any = null;
     let toolResponse: any = null;
+    let sessionId: string | undefined;
     const assistantMessageId = `assistant-${Date.now()}`;
 
     ws.onopen = () => {
@@ -103,6 +105,7 @@ export default function ChatInterface({
           id: assistantMessageId,
           role: 'assistant',
           content: fullResponse,
+          sessionId: sessionId,
           metadata,
           scratchpad,
           tool_response: toolResponse,
@@ -140,6 +143,11 @@ export default function ChatInterface({
         return;
       }
 
+      if (result.startsWith('[SESSION_ID]')) {
+        sessionId = result.substring(12); // Capture session ID
+        return;
+      }
+
       fullResponse += result;
       setStreamingMessage({
         id: assistantMessageId,
@@ -168,14 +176,21 @@ export default function ChatInterface({
       <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
         <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
           <div className="space-y-4 max-w-4xl mx-auto">
-            {messages.map((message) => (
-              <ChatMessage key={message.id} message={message} />
+            {messages.map((message, index) => (
+              <ChatMessage 
+                key={message.id} 
+                message={message} 
+                isLastMessage={index === messages.length - 1 && message.role === 'assistant'}
+                token={token}
+              />
             ))}
 
             {streamingMessage && (
               <ChatMessage
                 message={streamingMessage}
                 isStreaming
+                isLastMessage={false}
+                token={token}
               />
             )}
 
@@ -192,7 +207,7 @@ export default function ChatInterface({
           </div>
         </ScrollArea>
 
-        <div className="border-t bg-gradient-to-r from-slate-50 to-indigo-50 dark:from-slate-900 dark:to-indigo-950 p-4">
+        <div className="border-t bg-white dark:bg-slate-900 p-4">
           <div className="max-w-4xl mx-auto">
             <PromptInput
               value={inputValue}
@@ -203,6 +218,7 @@ export default function ChatInterface({
               <PromptInputTextarea
                 placeholder="Type your message here..."
                 disabled={isLoading}
+                className="min-h-[60px] resize-none"
               />
               <PromptInputSubmit disabled={isLoading || !inputValue.trim()} />
             </PromptInput>

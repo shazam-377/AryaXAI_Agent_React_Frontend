@@ -42,15 +42,10 @@ export default function Home() {
               <ThemeToggle />
             </div>
             <div className="flex items-center justify-center gap-3">
-              <Sparkles className="h-8 w-8 animate-pulse" />
               <CardTitle className="text-3xl md:text-4xl font-bold text-center">
                 AryaXAI Agent
               </CardTitle>
-              <Sparkles className="h-8 w-8 animate-pulse" />
             </div>
-            <p className="text-center text-indigo-100 mt-2 text-sm">
-              Your Intelligent AI Assistant
-            </p>
           </CardHeader>
         </Card>
 
