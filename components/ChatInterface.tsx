@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/prompt-input';
 import ChatMessage from '@/components/ChatMessage';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowUp, Square, Brain, ChevronDown, ChevronUp, Mic, MicOff, AlertCircle, LogOut, RotateCcw } from 'lucide-react';
+import { Loader2, ArrowUp, Square, Brain, ChevronDown, ChevronUp, Mic, MicOff, AlertCircle, LogOut, RotateCcw, Copy, Volume2, VolumeX, Check } from 'lucide-react';
 import {
   Collapsible,
   CollapsibleContent,
@@ -66,9 +66,12 @@ export default function ChatInterface({
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
+  const [isReasoningSpeaking, setIsReasoningSpeaking] = useState(false);
+  const [reasoningCopied, setReasoningCopied] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const recognitionRef = useRef<any>(null);
+  const reasoningSpeakingRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const scrollToBottom = () => {
     if (scrollAreaRef.current) {
@@ -302,6 +305,8 @@ export default function ChatInterface({
     setCurrentSessionId(null);
     setSpeechError('');
     setWsConnected(false);
+    setIsReasoningSpeaking(false);
+    setReasoningCopied(false);
 
     // Reconnect WebSocket
     setTimeout(() => {
@@ -343,6 +348,37 @@ export default function ChatInterface({
     setShowReviewModal(true);
   };
 
+  const copyReasoningToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(streamingReasoning);
+      setReasoningCopied(true);
+      setTimeout(() => setReasoningCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy reasoning:', err);
+    }
+  };
+
+  const toggleReasoningSpeech = () => {
+    if (isReasoningSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsReasoningSpeaking(false);
+    } else {
+      const utterance = new SpeechSynthesisUtterance(streamingReasoning);
+      reasoningSpeakingRef.current = utterance;
+      
+      utterance.onend = () => {
+        setIsReasoningSpeaking(false);
+      };
+      
+      utterance.onerror = () => {
+        setIsReasoningSpeaking(false);
+      };
+
+      window.speechSynthesis.speak(utterance);
+      setIsReasoningSpeaking(true);
+    }
+  };
+
   const handleSubmit = async (queryOverride?: string) => {
     const userQuery = queryOverride || inputValue;
     
@@ -372,6 +408,8 @@ export default function ChatInterface({
     setIsReasoningActive(false);
     setShowReasoningBox(false);
     setIsReasoningOpen(true);
+    setReasoningCopied(false);
+    setIsReasoningSpeaking(false);
 
     let fullResponse = '';
     let fullReasoning = '';
@@ -541,7 +579,7 @@ export default function ChatInterface({
               {messages.map((message, index) => (
                 <div key={message.id}>
                   {message.reasoning && (
-                    <div className="flex gap-3 justify-start mb-2">
+                    <div className="flex gap-3 justify-start mb-2 group">
                       <div className="flex-shrink-0 pt-1">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md">
                           <Brain className="w-5 h-5 text-white" />
@@ -556,7 +594,6 @@ export default function ChatInterface({
                               className="w-full justify-between hover:bg-purple-50 dark:hover:bg-purple-950 p-3 rounded-xl border border-purple-200 dark:border-purple-800"
                             >
                               <span className="text-xs font-semibold text-purple-700 dark:text-purple-300 flex items-center gap-2">
-                                <Brain className="w-4 h-4" />
                                 View Agent Reasoning
                               </span>
                               <ChevronDown className="h-4 w-4 text-purple-700 dark:text-purple-300" />
@@ -567,6 +604,49 @@ export default function ChatInterface({
                               <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
                                 {message.reasoning}
                               </p>
+                              
+                              {/* Copy and TTS buttons for reasoning - visible on hover */}
+                              <div className="flex gap-2 items-center mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900"
+                                  onClick={copyReasoningToClipboard}
+                                  title="Copy reasoning"
+                                >
+                                  {reasoningCopied ? (
+                                    <>
+                                      <Check className="h-3 w-3 text-green-600 mr-1" />
+                                      <span className="text-xs text-green-600">Copied</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="h-3 w-3 text-purple-600 dark:text-purple-400 mr-1" />
+                                      <span className="text-xs text-purple-600 dark:text-purple-400">Copy</span>
+                                    </>
+                                  )}
+                                </Button>
+                                
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900"
+                                  onClick={toggleReasoningSpeech}
+                                  title={isReasoningSpeaking ? "Stop speaking" : "Read reasoning aloud"}
+                                >
+                                  {isReasoningSpeaking ? (
+                                    <>
+                                      <VolumeX className="h-3 w-3 text-red-600 dark:text-red-400 mr-1" />
+                                      <span className="text-xs text-red-600 dark:text-red-400">Stop</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Volume2 className="h-3 w-3 text-purple-600 dark:text-purple-400 mr-1" />
+                                      <span className="text-xs text-purple-600 dark:text-purple-400">Read aloud</span>
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
                             </div>
                           </CollapsibleContent>
                         </Collapsible>
@@ -585,7 +665,7 @@ export default function ChatInterface({
               ))}
 
               {showReasoningBox && (
-                <div className="flex gap-3 justify-start animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <div className="flex gap-3 justify-start animate-in fade-in slide-in-from-bottom-4 duration-300 group">
                   <div className="flex-shrink-0 pt-1">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md">
                       <Brain className={`w-5 h-5 text-white ${isReasoningActive ? 'animate-pulse' : ''}`} />
@@ -624,6 +704,51 @@ export default function ChatInterface({
                               <span className="inline-block w-2 h-4 ml-1 bg-purple-500 animate-pulse" />
                             )}
                           </p>
+                          
+                          {/* Copy and TTS buttons for live reasoning - visible on hover */}
+                          {!isReasoningActive && streamingReasoning && (
+                            <div className="flex gap-2 items-center mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900"
+                                onClick={copyReasoningToClipboard}
+                                title="Copy reasoning"
+                              >
+                                {reasoningCopied ? (
+                                  <>
+                                    <Check className="h-3 w-3 text-green-600 mr-1" />
+                                    <span className="text-xs text-green-600">Copied</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="h-3 w-3 text-purple-600 dark:text-purple-400 mr-1" />
+                                    <span className="text-xs text-purple-600 dark:text-purple-400">Copy</span>
+                                  </>
+                                )}
+                              </Button>
+                              
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900"
+                                onClick={toggleReasoningSpeech}
+                                title={isReasoningSpeaking ? "Stop speaking" : "Read reasoning aloud"}
+                              >
+                                {isReasoningSpeaking ? (
+                                  <>
+                                    <VolumeX className="h-3 w-3 text-red-600 dark:text-red-400 mr-1" />
+                                    <span className="text-xs text-red-600 dark:text-red-400">Stop</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Volume2 className="h-3 w-3 text-purple-600 dark:text-purple-400 mr-1" />
+                                    <span className="text-xs text-purple-600 dark:text-purple-400">Read aloud</span>
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </CollapsibleContent>
                     </Collapsible>

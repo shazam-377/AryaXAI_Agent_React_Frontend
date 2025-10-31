@@ -281,16 +281,16 @@ export default function ChatMessage({
               {message.metadata && !isError && (
                 <div className="flex gap-2 text-xs flex-wrap">
                   <Badge variant="secondary" className="flex items-center gap-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
-                    ⏱️ {message.metadata.execution_time?.toFixed(2)}s
+                    Execution time: {message.metadata.execution_time?.toFixed(2)}s
                   </Badge>
                   <Badge variant="secondary" className="flex items-center gap-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
-                    🪙 {message.metadata.total_tokens}
+                    Total tokens: {message.metadata.total_tokens}
                   </Badge>
                   <Badge variant="secondary" className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
-                    📥 {message.metadata.input_tokens}
+                    Input tokens: {message.metadata.input_tokens}
                   </Badge>
                   <Badge variant="secondary" className="flex items-center gap-1 bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300">
-                    📤 {message.metadata.output_tokens}
+                    Output tokens: {message.metadata.output_tokens}
                   </Badge>
                 </div>
               )}
@@ -304,7 +304,7 @@ export default function ChatMessage({
                 >
                   <CollapsibleTrigger asChild>
                     <Button variant="ghost" size="sm" className="w-full justify-between hover:bg-indigo-50 dark:hover:bg-indigo-950">
-                      <span className="text-xs">🔍 Agent Execution Details</span>
+                      <span className="text-xs">Agent Execution Details</span>
                       {isDetailsOpen ? (
                         <ChevronUp className="h-4 w-4" />
                       ) : (
@@ -318,10 +318,10 @@ export default function ChatMessage({
                         <Tabs defaultValue={message.scratchpad ? 'planning' : 'tools'}>
                           <TabsList className="grid w-full grid-cols-2">
                             {message.scratchpad && (
-                              <TabsTrigger value="planning">🧠 Agent Planning</TabsTrigger>
+                              <TabsTrigger value="planning">Agent Planning</TabsTrigger>
                             )}
                             {message.tool_response && (
-                              <TabsTrigger value="tools">🛠️ Tool Executions</TabsTrigger>
+                              <TabsTrigger value="tools">Tool Executions</TabsTrigger>
                             )}
                           </TabsList>
 
@@ -453,7 +453,7 @@ function ToolExecutionCard({ execution, index }: { execution: any; index: number
       <CardContent className="p-4 space-y-3">
         <div className="flex justify-between items-start">
           <div>
-            <h4 className="font-semibold text-sm">🔧 Tool Execution #{index}</h4>
+            <h4 className="font-semibold text-sm">Tool Execution #{index}</h4>
             <p className="text-xs text-muted-foreground mt-1">
               Tool: <code className="bg-muted px-1 rounded">{toolCall.name || 'N/A'}</code>
             </p>
@@ -474,14 +474,14 @@ function ToolExecutionCard({ execution, index }: { execution: any; index: number
           <div className="space-y-4 text-xs pt-2">
             {execution.ai_content && (
               <div>
-                <p className="font-medium mb-2">💭 AI Reasoning:</p>
+                <p className="font-medium mb-2">AI Reasoning:</p>
                 <p className="bg-muted p-3 rounded">{execution.ai_content}</p>
               </div>
             )}
 
             {toolCall.args && (
               <div>
-                <p className="font-medium mb-2">🔹 Tool Arguments:</p>
+                <p className="font-medium mb-2">Tool Arguments:</p>
                 <pre className="bg-muted p-3 rounded overflow-auto max-h-40">
                   {JSON.stringify(toolCall.args, null, 2)}
                 </pre>
@@ -490,26 +490,26 @@ function ToolExecutionCard({ execution, index }: { execution: any; index: number
 
             {tokenUsage && Object.keys(tokenUsage).length > 0 && (
               <div>
-                <p className="font-medium mb-2">📈 Token Usage & Performance:</p>
+                <p className="font-medium mb-2">Token Usage & Performance:</p>
                 
                 <div className="grid grid-cols-4 gap-2 mb-2">
-                  <Badge variant="outline">Prompt: {tokenUsage.prompt_tokens || 0}</Badge>
-                  <Badge variant="outline">Completion: {tokenUsage.completion_tokens || 0}</Badge>
-                  <Badge variant="outline">Total: {tokenUsage.total_tokens || 0}</Badge>
+                  <Badge variant="outline">Prompt tokens: {tokenUsage.prompt_tokens || 0}</Badge>
+                  <Badge variant="outline">Completion tokens: {tokenUsage.completion_tokens || 0}</Badge>
+                  <Badge variant="outline">Total tokens: {tokenUsage.total_tokens || 0}</Badge>
                   <Badge variant="outline">
-                    Time: {tokenUsage.total_time ? `${tokenUsage.total_time.toFixed(3)}s` : 'N/A'}
+                    Time taken: {tokenUsage.total_time ? `${tokenUsage.total_time.toFixed(3)}s` : 'N/A'}
                   </Badge>
                 </div>
                 
                 <div className="grid grid-cols-3 gap-2 text-[10px]">
                   <span className="text-muted-foreground">
-                    ⏱️ Prompt: {tokenUsage.prompt_time ? `${tokenUsage.prompt_time.toFixed(3)}s` : 'N/A'}
+                    Prompt time: {tokenUsage.prompt_time ? `${tokenUsage.prompt_time.toFixed(3)}s` : 'N/A'}
                   </span>
                   <span className="text-muted-foreground">
-                    ⏱️ Completion: {tokenUsage.completion_time ? `${tokenUsage.completion_time.toFixed(3)}s` : 'N/A'}
+                    Completion time: {tokenUsage.completion_time ? `${tokenUsage.completion_time.toFixed(3)}s` : 'N/A'}
                   </span>
                   <span className="text-muted-foreground">
-                    ⏱️ Queue: {tokenUsage.queue_time ? `${tokenUsage.queue_time.toFixed(3)}s` : 'N/A'}
+                    Queue time: {tokenUsage.queue_time ? `${tokenUsage.queue_time.toFixed(3)}s` : 'N/A'}
                   </span>
                 </div>
               </div>
@@ -517,7 +517,7 @@ function ToolExecutionCard({ execution, index }: { execution: any; index: number
 
             {(responseMetadata.model_name || responseMetadata.finish_reason) && (
               <div>
-                <p className="font-medium mb-2">🤖 Model Details:</p>
+                <p className="font-medium mb-2">Model Details:</p>
                 <div className="space-y-1">
                   {responseMetadata.model_name && (
                     <p className="text-muted-foreground">Model: {responseMetadata.model_name}</p>
@@ -571,7 +571,7 @@ function ToolExecutionCard({ execution, index }: { execution: any; index: number
 
                 {(toolResult.name || toolResult.message_id) && (
                   <div className="mt-3">
-                    <p className="font-medium mb-2">🔍 Result Metadata:</p>
+                    <p className="font-medium mb-2">Result Metadata:</p>
                     <div className="space-y-1 text-[10px] text-muted-foreground">
                       {toolResult.name && <p>Tool Name: {toolResult.name}</p>}
                       {toolResult.message_id && <p>Message ID: {toolResult.message_id}</p>}
@@ -584,7 +584,7 @@ function ToolExecutionCard({ execution, index }: { execution: any; index: number
             )}
 
             <div>
-              <p className="font-medium mb-2">📋 Execution Metadata:</p>
+              <p className="font-medium mb-2">Execution Metadata:</p>
               <div className="space-y-1 text-[10px] text-muted-foreground">
                 <p>Message Index: {execution.message_index || 'N/A'}</p>
                 <p>Message Type: {execution.message_type || 'N/A'}</p>
