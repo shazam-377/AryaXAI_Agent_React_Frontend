@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronUp, User, Bot, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { ChevronDown, ChevronUp, User, Bot, ThumbsUp, ThumbsDown, Copy, Check, Volume2, VolumeX, RotateCcw } from 'lucide-react';
 
 const API_HTTP_URL = process.env.NEXT_PUBLIC_API_HTTP_URL;
 
@@ -20,6 +20,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   sessionId?: string;
+  userQuery?: string;
   metadata?: {
     execution_time?: number;
     total_tokens?: number;
@@ -35,24 +36,29 @@ interface ChatMessageProps {
   isStreaming?: boolean;
   isLastMessage?: boolean;
   token: string;
+  onRetry?: (query: string) => void;
 }
 
 export default function ChatMessage({ 
   message, 
   isStreaming, 
   isLastMessage,
-  token 
+  token,
+  onRetry
 }: ChatMessageProps) {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [displayedContent, setDisplayedContent] = useState('');
   const [feedbackGiven, setFeedbackGiven] = useState(false);
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const contentRef = useRef(message.content);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const isUser = message.role === 'user';
+  const isError = message.content.startsWith('Error:') || message.content === 'Connection error occurred';
 
-  // Smooth streaming effect - reduced jitter
   useEffect(() => {
     if (isStreaming && message.content !== contentRef.current) {
       contentRef.current = message.content;
@@ -96,8 +102,53 @@ export default function ChatMessage({
     }
   };
 
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+    }
+  };
+
+  const toggleSpeech = () => {
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    } else {
+      const utterance = new SpeechSynthesisUtterance(message.content);
+      utteranceRef.current = utterance;
+      
+      utterance.onend = () => {
+        setIsSpeaking(false);
+      };
+      
+      utterance.onerror = () => {
+        setIsSpeaking(false);
+      };
+
+      window.speechSynthesis.speak(utterance);
+      setIsSpeaking(true);
+    }
+  };
+
+  const handleRetry = () => {
+    if (message.userQuery && onRetry) {
+      onRetry(message.userQuery);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (isSpeaking) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [isSpeaking]);
+
   return (
-    <div className="mb-8"> {/* Added spacing between conversation sets */}
+    <div className="mb-8">
       <div className={`flex gap-4 ${isUser ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-4 duration-300`}>
         {!isUser && (
           <div className="flex-shrink-0 pt-1">
@@ -109,47 +160,143 @@ export default function ChatMessage({
 
         <div className={`flex-1 max-w-[85%] ${isUser ? 'flex flex-col items-end' : ''}`}>
           {isUser ? (
-            // Enhanced user message box with border and shadow
-            <div className="bg-slate-300 dark:bg-slate-600 border-2 border-slate-400 dark:border-slate-500 rounded-2xl px-5 py-4 max-w-fit shadow-md">
-              <p className="text-sm leading-relaxed text-slate-900 dark:text-white font-medium">
-                {message.content}
-              </p>
+            <div className="w-full group">
+              <div className="bg-slate-300 dark:bg-slate-600 border-2 border-slate-400 dark:border-slate-500 rounded-2xl px-5 py-4 max-w-fit ml-auto shadow-md">
+                <p className="text-sm leading-relaxed text-slate-900 dark:text-white font-medium">
+                  {message.content}
+                </p>
+              </div>
+              {/* Copy button below user message - visible on hover */}
+              <div className="flex justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                  onClick={copyToClipboard}
+                  title="Copy message"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-3 w-3 text-green-600 mr-1" />
+                      <span className="text-xs text-green-600">Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3 w-3 text-slate-600 dark:text-slate-400 mr-1" />
+                      <span className="text-xs text-slate-600 dark:text-slate-400">Copy</span>
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           ) : (
-            <div className="space-y-4"> {/* Increased spacing between assistant components */}
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                {isStreaming ? (
-                  <div className="whitespace-pre-wrap break-words">
+            <div className="space-y-4 w-full group">
+              {/* Error message styling */}
+              {isError && (
+                <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded-lg p-4">
+                  <p className="text-sm text-red-700 dark:text-red-300 font-medium">
                     {displayedContent}
-                    <span className="inline-block w-2 h-4 ml-1 bg-indigo-500 animate-pulse" />
-                  </div>
-                ) : (
-                  <Markdown className="text-sm leading-relaxed">
-                    {displayedContent}
-                  </Markdown>
-                )}
-              </div>
+                  </p>
+                </div>
+              )}
 
-              {/* Metadata */}
-              {message.metadata && (
-                <div className="flex gap-2 text-xs flex-wrap pt-2">
+              {!isError && (
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  {isStreaming ? (
+                    <div className="whitespace-pre-wrap break-words">
+                      {displayedContent}
+                      <span className="inline-block w-2 h-4 ml-1 bg-indigo-500 animate-pulse" />
+                    </div>
+                  ) : (
+                    <Markdown className="text-sm leading-relaxed">
+                      {displayedContent}
+                    </Markdown>
+                  )}
+                </div>
+              )}
+
+              {/* Action buttons below assistant message - visible on hover */}
+              {!isStreaming && (
+                <div className="flex gap-2 items-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  {/* Copy button */}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                    onClick={copyToClipboard}
+                    title="Copy response"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="h-3 w-3 text-green-600 mr-1" />
+                        <span className="text-xs text-green-600">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3 w-3 text-slate-600 dark:text-slate-400 mr-1" />
+                        <span className="text-xs text-slate-600 dark:text-slate-400">Copy</span>
+                      </>
+                    )}
+                  </Button>
+
+                  {/* TTS button - only show if not an error */}
+                  {!isError && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                      onClick={toggleSpeech}
+                      title={isSpeaking ? "Stop speaking" : "Read aloud"}
+                    >
+                      {isSpeaking ? (
+                        <>
+                          <VolumeX className="h-3 w-3 text-red-600 dark:text-red-400 mr-1" />
+                          <span className="text-xs text-red-600 dark:text-red-400">Stop</span>
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="h-3 w-3 text-slate-600 dark:text-slate-400 mr-1" />
+                          <span className="text-xs text-slate-600 dark:text-slate-400">Read aloud</span>
+                        </>
+                      )}
+                    </Button>
+                  )}
+
+                  {/* Retry button - only show if error */}
+                  {isError && message.userQuery && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900 text-amber-600 dark:text-amber-400"
+                      onClick={handleRetry}
+                      title="Retry this query"
+                    >
+                      <RotateCcw className="h-3 w-3 mr-1" />
+                      <span className="text-xs">Retry</span>
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {message.metadata && !isError && (
+                <div className="flex gap-2 text-xs flex-wrap">
                   <Badge variant="secondary" className="flex items-center gap-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
-                    execution time: {message.metadata.execution_time?.toFixed(2)}s
+                    ⏱️ {message.metadata.execution_time?.toFixed(2)}s
                   </Badge>
                   <Badge variant="secondary" className="flex items-center gap-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
-                    total tokens: {message.metadata.total_tokens}
+                    🪙 {message.metadata.total_tokens}
                   </Badge>
                   <Badge variant="secondary" className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
-                    input tokens: {message.metadata.input_tokens}
+                    📥 {message.metadata.input_tokens}
                   </Badge>
                   <Badge variant="secondary" className="flex items-center gap-1 bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300">
-                    output tokens: {message.metadata.output_tokens}
+                    📤 {message.metadata.output_tokens}
                   </Badge>
                 </div>
               )}
 
               {/* Agent Execution Details */}
-              {(message.scratchpad || message.tool_response) && (
+              {(message.scratchpad || message.tool_response) && !isError && (
                 <Collapsible
                   open={isDetailsOpen}
                   onOpenChange={setIsDetailsOpen}
@@ -157,7 +304,7 @@ export default function ChatMessage({
                 >
                   <CollapsibleTrigger asChild>
                     <Button variant="ghost" size="sm" className="w-full justify-between hover:bg-indigo-50 dark:hover:bg-indigo-950">
-                      <span className="text-xs">Agent Execution Details</span>
+                      <span className="text-xs">🔍 Agent Execution Details</span>
                       {isDetailsOpen ? (
                         <ChevronUp className="h-4 w-4" />
                       ) : (
@@ -171,10 +318,10 @@ export default function ChatMessage({
                         <Tabs defaultValue={message.scratchpad ? 'planning' : 'tools'}>
                           <TabsList className="grid w-full grid-cols-2">
                             {message.scratchpad && (
-                              <TabsTrigger value="planning">Agent Planning</TabsTrigger>
+                              <TabsTrigger value="planning">🧠 Agent Planning</TabsTrigger>
                             )}
                             {message.tool_response && (
-                              <TabsTrigger value="tools">Tool Executions</TabsTrigger>
+                              <TabsTrigger value="tools">🛠️ Tool Executions</TabsTrigger>
                             )}
                           </TabsList>
 
@@ -244,9 +391,8 @@ export default function ChatMessage({
                 </Collapsible>
               )}
 
-              {/* Feedback buttons */}
-              {!isUser && isLastMessage && !isStreaming && message.sessionId && (
-                <div className="w-full pt-2">
+              {!isUser && isLastMessage && !isStreaming && message.sessionId && !isError && (
+                <div className="w-full">
                   {!feedbackGiven ? (
                     <div className="flex gap-2 items-center justify-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                       <span className="text-xs text-muted-foreground">Was this response helpful?</span>
@@ -294,7 +440,7 @@ export default function ChatMessage({
   );
 }
 
-// Tool Execution Card Component (unchanged structure, added spacing)
+// Tool Execution Card Component
 function ToolExecutionCard({ execution, index }: { execution: any; index: number }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const toolCall = execution.tool_call || {};
