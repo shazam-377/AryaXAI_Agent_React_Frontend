@@ -117,7 +117,7 @@ export default function SessionReviewModal({
         <DialogHeader>
           <DialogTitle>Session Review</DialogTitle>
           <DialogDescription>
-            Please share your feedback about your experience with the chatbot
+            Please share your feedback about your experience with the Agent
           </DialogDescription>
         </DialogHeader>
 
@@ -171,7 +171,7 @@ export default function SessionReviewModal({
             {/* Review Text Area */}
             <div className="space-y-2">
               <label htmlFor="review" className="text-sm font-medium">
-                Additional Feedback (Optional)
+                Additional Feedback 
               </label>
               <Textarea
                 id="review"
