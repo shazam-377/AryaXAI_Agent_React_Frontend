@@ -83,7 +83,6 @@ export default function ChatMessage({
         setFeedbackGiven(true);
         setShowThankYou(true);
         
-        // Fade out thank you message after 3 seconds
         setTimeout(() => {
           setShowThankYou(false);
         }, 3000);
@@ -98,203 +97,204 @@ export default function ChatMessage({
   };
 
   return (
-    <div className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-4 duration-300`}>
-      {!isUser && (
-      <div className="flex-shrink-0 pt-1">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md">
-          <Bot className="w-5 h-5 text-white" />
-        </div>
-      </div>
-    )}
-
-      <div className={`flex-1 max-w-[85%] ${isUser ? 'flex flex-col items-end' : ''}`}>
-        {isUser ? (
-          <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl px-4 py-3 max-w-fit">
-            <p className="text-sm leading-relaxed text-slate-900 dark:text-slate-100">
-              {message.content}
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              {isStreaming ? (
-                <div className="whitespace-pre-wrap break-words">
-                  {displayedContent}
-                  <span className="inline-block w-2 h-4 ml-1 bg-indigo-500 animate-pulse" />
-                </div>
-              ) : (
-                <Markdown className="text-sm">
-                  {displayedContent}
-                </Markdown>
-              )}
+    <div className="mb-8"> {/* Added spacing between conversation sets */}
+      <div className={`flex gap-4 ${isUser ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-4 duration-300`}>
+        {!isUser && (
+          <div className="flex-shrink-0 pt-1">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md">
+              <Bot className="w-5 h-5 text-white" />
             </div>
+          </div>
+        )}
 
-            {/* Metadata */}
-            {message.metadata && (
-              <div className="flex gap-2 mt-2 text-xs flex-wrap">
-                <Badge variant="secondary" className="flex items-center gap-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
-                  Execution time: {message.metadata.execution_time?.toFixed(2)}s
-                </Badge>
-                <Badge variant="secondary" className="flex items-center gap-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
-                  Total tokens: {message.metadata.total_tokens}
-                </Badge>
-                <Badge variant="secondary" className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
-                  Input tokens: {message.metadata.input_tokens}
-                </Badge>
-                <Badge variant="secondary" className="flex items-center gap-1 bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300">
-                  Output tokens: {message.metadata.output_tokens}
-                </Badge>
-              </div>
-            )}
-
-            {/* Agent Execution Details */}
-            {(message.scratchpad || message.tool_response) && (
-              <Collapsible
-                open={isDetailsOpen}
-                onOpenChange={setIsDetailsOpen}
-                className="mt-2 w-full"
-              >
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="w-full justify-between hover:bg-indigo-50 dark:hover:bg-indigo-950">
-                    <span className="text-xs">Agent Execution Details</span>
-                    {isDetailsOpen ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <Card className="mt-2 border-indigo-200 dark:border-indigo-800">
-                    <CardContent className="p-4">
-                      <Tabs defaultValue={message.scratchpad ? 'planning' : 'tools'}>
-                        <TabsList className="grid w-full grid-cols-2">
-                          {message.scratchpad && (
-                            <TabsTrigger value="planning">Agent Planning</TabsTrigger>
-                          )}
-                          {message.tool_response && (
-                            <TabsTrigger value="tools">Tool Executions</TabsTrigger>
-                          )}
-                        </TabsList>
-
-                        {message.scratchpad && (
-                          <TabsContent value="planning" className="space-y-2">
-                            <h4 className="font-semibold text-sm">Agent's Planning Variables:</h4>
-                            {Object.entries(message.scratchpad).map(([key, value]) => (
-                              <div key={key} className="space-y-1">
-                                <p className="font-medium text-sm">{key}:</p>
-                                <pre className="text-xs bg-muted p-2 rounded overflow-auto">
-                                  {typeof value === 'object'
-                                    ? JSON.stringify(value, null, 2)
-                                    : String(value)}
-                                </pre>
-                              </div>
-                            ))}
-                          </TabsContent>
-                        )}
-
-                        {message.tool_response && (
-                          <TabsContent value="tools" className="space-y-4">
-                            {typeof message.tool_response === 'object' && (
-                              <>
-                                {/* Display summary metrics at the top */}
-                                <div className="grid grid-cols-2 gap-2">
-                                  <Card>
-                                    <CardContent className="p-3">
-                                      <p className="text-xs text-muted-foreground">Total Executions</p>
-                                      <p className="text-2xl font-bold">
-                                        {message.tool_response.total_executions || 0}
-                                      </p>
-                                    </CardContent>
-                                  </Card>
-                                  <Card>
-                                    <CardContent className="p-3">
-                                      <p className="text-xs text-muted-foreground">Messages</p>
-                                      <p className="text-2xl font-bold">
-                                        {message.tool_response.conversation_length || 0}
-                                      </p>
-                                    </CardContent>
-                                  </Card>
-                                </div>
-
-                                {/* Display individual tool executions */}
-                                {message.tool_response.tool_executions && message.tool_response.tool_executions.length > 0 ? (
-                                  <div className="space-y-4">
-                                    {message.tool_response.tool_executions
-                                      .slice()
-                                      .reverse()
-                                      .map((execution: any, i: number) => (
-                                        <ToolExecutionCard
-                                          key={i}
-                                          execution={execution}
-                                          index={i + 1}
-                                        />
-                                      ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-muted-foreground">No tool executions recorded</p>
-                                )}
-                              </>
-                            )}
-                          </TabsContent>
-                        )}
-                      </Tabs>
-                    </CardContent>
-                  </Card>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
-
-            {/* Feedback buttons - moved to bottom, only show for last assistant message */}
-            {!isUser && isLastMessage && !isStreaming && message.sessionId && (
-              <div className="mt-3 w-full">
-                {!feedbackGiven ? (
-                  <div className="flex gap-2 items-center justify-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <span className="text-xs text-muted-foreground">Was this response helpful?</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleFeedback(true)}
-                      disabled={isSubmittingFeedback}
-                      className="hover:bg-green-100 dark:hover:bg-green-900 transition-colors"
-                    >
-                      <ThumbsUp className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleFeedback(false)}
-                      disabled={isSubmittingFeedback}
-                      className="hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
-                    >
-                      <ThumbsDown className="h-4 w-4 text-red-600 dark:text-red-400" />
-                    </Button>
+        <div className={`flex-1 max-w-[85%] ${isUser ? 'flex flex-col items-end' : ''}`}>
+          {isUser ? (
+            // Enhanced user message box with border and shadow
+            <div className="bg-slate-300 dark:bg-slate-600 border-2 border-slate-400 dark:border-slate-500 rounded-2xl px-5 py-4 max-w-fit shadow-md">
+              <p className="text-sm leading-relaxed text-slate-900 dark:text-white font-medium">
+                {message.content}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4"> {/* Increased spacing between assistant components */}
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                {isStreaming ? (
+                  <div className="whitespace-pre-wrap break-words">
+                    {displayedContent}
+                    <span className="inline-block w-2 h-4 ml-1 bg-indigo-500 animate-pulse" />
                   </div>
-                ) : showThankYou && (
-                  <div className="flex items-center justify-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <p className="text-xs text-green-600 dark:text-green-400 font-medium">
-                      ✓ Thank you for sharing your feedback!
-                    </p>
-                  </div>
+                ) : (
+                  <Markdown className="text-sm leading-relaxed">
+                    {displayedContent}
+                  </Markdown>
                 )}
               </div>
-            )}
-          </>
+
+              {/* Metadata */}
+              {message.metadata && (
+                <div className="flex gap-2 text-xs flex-wrap pt-2">
+                  <Badge variant="secondary" className="flex items-center gap-1 bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300">
+                    execution time: {message.metadata.execution_time?.toFixed(2)}s
+                  </Badge>
+                  <Badge variant="secondary" className="flex items-center gap-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
+                    total tokens: {message.metadata.total_tokens}
+                  </Badge>
+                  <Badge variant="secondary" className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
+                    input tokens: {message.metadata.input_tokens}
+                  </Badge>
+                  <Badge variant="secondary" className="flex items-center gap-1 bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300">
+                    output tokens: {message.metadata.output_tokens}
+                  </Badge>
+                </div>
+              )}
+
+              {/* Agent Execution Details */}
+              {(message.scratchpad || message.tool_response) && (
+                <Collapsible
+                  open={isDetailsOpen}
+                  onOpenChange={setIsDetailsOpen}
+                  className="w-full"
+                >
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="w-full justify-between hover:bg-indigo-50 dark:hover:bg-indigo-950">
+                      <span className="text-xs">Agent Execution Details</span>
+                      {isDetailsOpen ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <Card className="mt-3 border-indigo-200 dark:border-indigo-800">
+                      <CardContent className="p-4">
+                        <Tabs defaultValue={message.scratchpad ? 'planning' : 'tools'}>
+                          <TabsList className="grid w-full grid-cols-2">
+                            {message.scratchpad && (
+                              <TabsTrigger value="planning">Agent Planning</TabsTrigger>
+                            )}
+                            {message.tool_response && (
+                              <TabsTrigger value="tools">Tool Executions</TabsTrigger>
+                            )}
+                          </TabsList>
+
+                          {message.scratchpad && (
+                            <TabsContent value="planning" className="space-y-3 mt-4">
+                              <h4 className="font-semibold text-sm">Agent's Planning Variables:</h4>
+                              {Object.entries(message.scratchpad).map(([key, value]) => (
+                                <div key={key} className="space-y-1">
+                                  <p className="font-medium text-sm">{key}:</p>
+                                  <pre className="text-xs bg-muted p-3 rounded overflow-auto">
+                                    {typeof value === 'object'
+                                      ? JSON.stringify(value, null, 2)
+                                      : String(value)}
+                                  </pre>
+                                </div>
+                              ))}
+                            </TabsContent>
+                          )}
+
+                          {message.tool_response && (
+                            <TabsContent value="tools" className="space-y-4 mt-4">
+                              {typeof message.tool_response === 'object' && (
+                                <>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <Card>
+                                      <CardContent className="p-3">
+                                        <p className="text-xs text-muted-foreground">Total Executions</p>
+                                        <p className="text-2xl font-bold">
+                                          {message.tool_response.total_executions || 0}
+                                        </p>
+                                      </CardContent>
+                                    </Card>
+                                    <Card>
+                                      <CardContent className="p-3">
+                                        <p className="text-xs text-muted-foreground">Messages</p>
+                                        <p className="text-2xl font-bold">
+                                          {message.tool_response.conversation_length || 0}
+                                        </p>
+                                      </CardContent>
+                                    </Card>
+                                  </div>
+
+                                  {message.tool_response.tool_executions && message.tool_response.tool_executions.length > 0 ? (
+                                    <div className="space-y-4">
+                                      {message.tool_response.tool_executions
+                                        .slice()
+                                        .reverse()
+                                        .map((execution: any, i: number) => (
+                                          <ToolExecutionCard
+                                            key={i}
+                                            execution={execution}
+                                            index={i + 1}
+                                          />
+                                        ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground">No tool executions recorded</p>
+                                  )}
+                                </>
+                              )}
+                            </TabsContent>
+                          )}
+                        </Tabs>
+                      </CardContent>
+                    </Card>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+
+              {/* Feedback buttons */}
+              {!isUser && isLastMessage && !isStreaming && message.sessionId && (
+                <div className="w-full pt-2">
+                  {!feedbackGiven ? (
+                    <div className="flex gap-2 items-center justify-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                      <span className="text-xs text-muted-foreground">Was this response helpful?</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleFeedback(true)}
+                        disabled={isSubmittingFeedback}
+                        className="hover:bg-green-100 dark:hover:bg-green-900 transition-colors"
+                      >
+                        <ThumbsUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleFeedback(false)}
+                        disabled={isSubmittingFeedback}
+                        className="hover:bg-red-100 dark:hover:bg-red-900 transition-colors"
+                      >
+                        <ThumbsDown className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      </Button>
+                    </div>
+                  ) : showThankYou && (
+                    <div className="flex items-center justify-center p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800 animate-in fade-in slide-in-from-bottom-2 duration-300 shadow-sm">
+                      <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                        ✓ Thank you for sharing your feedback!
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {isUser && (
+          <div className="flex-shrink-0 pt-1">
+            <div className="w-8 h-8 rounded-full bg-slate-400 dark:bg-slate-600 flex items-center justify-center shadow-md">
+              <User className="w-5 h-5 text-white" />
+            </div>
+          </div>
         )}
       </div>
-
-      {isUser && (
-      <div className="flex-shrink-0">
-        <div className="w-8 h-8 rounded-full bg-slate-400 dark:bg-slate-600 flex items-center justify-center shadow-md">
-          <User className="w-5 h-5 text-white" />
-        </div>
-      </div>
-    )}
     </div>
   );
 }
 
-// Tool Execution Card Component
+// Tool Execution Card Component (unchanged structure, added spacing)
 function ToolExecutionCard({ execution, index }: { execution: any; index: number }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const toolCall = execution.tool_call || {};
@@ -308,7 +308,7 @@ function ToolExecutionCard({ execution, index }: { execution: any; index: number
         <div className="flex justify-between items-start">
           <div>
             <h4 className="font-semibold text-sm">🔧 Tool Execution #{index}</h4>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-1">
               Tool: <code className="bg-muted px-1 rounded">{toolCall.name || 'N/A'}</code>
             </p>
             <p className="text-xs text-muted-foreground">
@@ -325,31 +325,27 @@ function ToolExecutionCard({ execution, index }: { execution: any; index: number
         </div>
 
         {isExpanded && (
-          <div className="space-y-3 text-xs">
-            {/* AI Message Content (reasoning before tool call) */}
+          <div className="space-y-4 text-xs pt-2">
             {execution.ai_content && (
               <div>
-                <p className="font-medium mb-1">💭 AI Reasoning:</p>
-                <p className="bg-muted p-2 rounded">{execution.ai_content}</p>
+                <p className="font-medium mb-2">💭 AI Reasoning:</p>
+                <p className="bg-muted p-3 rounded">{execution.ai_content}</p>
               </div>
             )}
 
-            {/* Tool Arguments */}
             {toolCall.args && (
               <div>
-                <p className="font-medium mb-1">🔹 Tool Arguments:</p>
-                <pre className="bg-muted p-2 rounded overflow-auto max-h-40">
+                <p className="font-medium mb-2">🔹 Tool Arguments:</p>
+                <pre className="bg-muted p-3 rounded overflow-auto max-h-40">
                   {JSON.stringify(toolCall.args, null, 2)}
                 </pre>
               </div>
             )}
 
-            {/* Response Metadata (Token Usage) */}
             {tokenUsage && Object.keys(tokenUsage).length > 0 && (
               <div>
                 <p className="font-medium mb-2">📈 Token Usage & Performance:</p>
                 
-                {/* Token metrics */}
                 <div className="grid grid-cols-4 gap-2 mb-2">
                   <Badge variant="outline">Prompt: {tokenUsage.prompt_tokens || 0}</Badge>
                   <Badge variant="outline">Completion: {tokenUsage.completion_tokens || 0}</Badge>
@@ -359,7 +355,6 @@ function ToolExecutionCard({ execution, index }: { execution: any; index: number
                   </Badge>
                 </div>
                 
-                {/* Timing breakdown */}
                 <div className="grid grid-cols-3 gap-2 text-[10px]">
                   <span className="text-muted-foreground">
                     ⏱️ Prompt: {tokenUsage.prompt_time ? `${tokenUsage.prompt_time.toFixed(3)}s` : 'N/A'}
@@ -374,10 +369,9 @@ function ToolExecutionCard({ execution, index }: { execution: any; index: number
               </div>
             )}
 
-            {/* Model Information */}
             {(responseMetadata.model_name || responseMetadata.finish_reason) && (
               <div>
-                <p className="font-medium mb-1">🤖 Model Details:</p>
+                <p className="font-medium mb-2">🤖 Model Details:</p>
                 <div className="space-y-1">
                   {responseMetadata.model_name && (
                     <p className="text-muted-foreground">Model: {responseMetadata.model_name}</p>
@@ -389,7 +383,6 @@ function ToolExecutionCard({ execution, index }: { execution: any; index: number
               </div>
             )}
 
-            {/* Tool Result */}
             {toolResult && Object.keys(toolResult).length > 0 && (
               <div>
                 {toolResult.status && (
@@ -399,7 +392,7 @@ function ToolExecutionCard({ execution, index }: { execution: any; index: number
                       const statusIcon = status === 'success' ? '✅' : status === 'error' ? '❌' : '⚠️';
                       return (
                         <>
-                          <p className="font-medium mb-1">{statusIcon} Execution Result:</p>
+                          <p className="font-medium mb-2">{statusIcon} Execution Result:</p>
                           <p className="mb-2">
                             <Badge variant={status === 'success' ? 'default' : 'destructive'}>
                               {status.toUpperCase()}
@@ -411,16 +404,15 @@ function ToolExecutionCard({ execution, index }: { execution: any; index: number
                   </>
                 )}
                 
-                {/* Result Content */}
                 {toolResult.content && (
                   <div>
-                    <p className="font-medium mb-1">Output:</p>
+                    <p className="font-medium mb-2">Output:</p>
                     {typeof toolResult.content === 'object' ? (
-                      <pre className="bg-muted p-2 rounded overflow-auto max-h-60 text-[10px]">
+                      <pre className="bg-muted p-3 rounded overflow-auto max-h-60 text-[10px]">
                         {JSON.stringify(toolResult.content, null, 2)}
                       </pre>
                     ) : (
-                      <div className="bg-muted p-2 rounded overflow-auto max-h-60">
+                      <div className="bg-muted p-3 rounded overflow-auto max-h-60">
                         {String(toolResult.content).length > 200 ? (
                           <pre className="text-[10px] whitespace-pre-wrap">{String(toolResult.content)}</pre>
                         ) : (
@@ -431,10 +423,9 @@ function ToolExecutionCard({ execution, index }: { execution: any; index: number
                   </div>
                 )}
 
-                {/* Additional result metadata */}
                 {(toolResult.name || toolResult.message_id) && (
-                  <div className="mt-2">
-                    <p className="font-medium mb-1">🔍 Result Metadata:</p>
+                  <div className="mt-3">
+                    <p className="font-medium mb-2">🔍 Result Metadata:</p>
                     <div className="space-y-1 text-[10px] text-muted-foreground">
                       {toolResult.name && <p>Tool Name: {toolResult.name}</p>}
                       {toolResult.message_id && <p>Message ID: {toolResult.message_id}</p>}
@@ -446,9 +437,8 @@ function ToolExecutionCard({ execution, index }: { execution: any; index: number
               </div>
             )}
 
-            {/* Message metadata */}
             <div>
-              <p className="font-medium mb-1">📋 Execution Metadata:</p>
+              <p className="font-medium mb-2">📋 Execution Metadata:</p>
               <div className="space-y-1 text-[10px] text-muted-foreground">
                 <p>Message Index: {execution.message_index || 'N/A'}</p>
                 <p>Message Type: {execution.message_type || 'N/A'}</p>

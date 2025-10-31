@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, Info } from 'lucide-react';
 
 const API_HTTP_URL = process.env.NEXT_PUBLIC_API_HTTP_URL;
 
@@ -48,6 +48,12 @@ export default function AuthPanel({
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [showOrgWarning, setShowOrgWarning] = useState(false);
+  const [showWorkspaceWarning, setShowWorkspaceWarning] = useState(false);
+  const [showProjectWarning, setShowProjectWarning] = useState(false);
+  const [orgsFetched, setOrgsFetched] = useState(false);
+  const [workspacesFetched, setWorkspacesFetched] = useState(false);
+  const [projectsFetched, setProjectsFetched] = useState(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -62,16 +68,13 @@ export default function AuthPanel({
       return;
     }
 
-    // Clear previous timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
-    // Don't show verifying state immediately
     setIsVerifying(true);
     setVerificationMsg('');
 
-    // Set new timer - wait 800ms after user stops typing
     debounceTimerRef.current = setTimeout(async () => {
       setLoading(true);
       try {
@@ -99,9 +102,8 @@ export default function AuthPanel({
         setLoading(false);
         setIsVerifying(false);
       }
-    }, 800); // Wait 800ms after user stops typing
+    }, 800);
 
-    // Cleanup function
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
@@ -111,7 +113,10 @@ export default function AuthPanel({
 
   // Fetch organizations
   useEffect(() => {
-    if (!verified || !mounted) return;
+    if (!verified || !mounted) {
+      setOrgsFetched(false);
+      return;
+    }
 
     const fetchOrganizations = async () => {
       try {
@@ -122,19 +127,45 @@ export default function AuthPanel({
         console.log('Response status:', response.status);
         const data = await response.json();
         console.log('Organizations received:', data.organizations);
-        setOrganizations(data.organizations || []);
+        
+        const orgList = data.organizations || [];
+        setOrganizations(orgList);
+        setOrgsFetched(true);
+        
+        if (orgList.length === 0) {
+          // No organizations - set empty and mark as complete
+          setOrganization('');
+          setWorkspace('');
+          setProject('');
+          setShowOrgWarning(true);
+          setWorkspacesFetched(true);
+          setProjectsFetched(true);
+        } else {
+          setShowOrgWarning(false);
+        }
       } catch (error) {
         console.error('Error fetching organizations:', error);
+        setOrganizations([]);
+        setOrganization('');
+        setWorkspace('');
+        setProject('');
+        setShowOrgWarning(true);
+        setOrgsFetched(true);
+        setWorkspacesFetched(true);
+        setProjectsFetched(true);
       }
     };
 
     fetchOrganizations();
-  }, [verified, token, mounted]);
+  }, [verified, token, mounted, setOrganization, setWorkspace, setProject]);
 
   // Fetch workspaces
   useEffect(() => {
-    if (!organization || organization === '--Select--' || !mounted) {
+    if (!orgsFetched || !mounted) return;
+    if (!organization || organization === '--Select--') {
+      setWorkspacesFetched(false);
       setWorkspaces([]);
+      setShowWorkspaceWarning(false);
       return;
     }
 
@@ -144,19 +175,39 @@ export default function AuthPanel({
           `${API_HTTP_URL}/workspaces?token=${token}&organization=${organization}`
         );
         const data = await response.json();
-        setWorkspaces(data.workspaces || []);
+        const workspaceList = data.workspaces || [];
+        setWorkspaces(workspaceList);
+        setWorkspacesFetched(true);
+        
+        if (workspaceList.length === 0) {
+          setWorkspace('');
+          setProject('');
+          setShowWorkspaceWarning(true);
+          setProjectsFetched(true);
+        } else {
+          setShowWorkspaceWarning(false);
+        }
       } catch (error) {
         console.error('Error fetching workspaces:', error);
+        setWorkspaces([]);
+        setWorkspace('');
+        setProject('');
+        setShowWorkspaceWarning(true);
+        setWorkspacesFetched(true);
+        setProjectsFetched(true);
       }
     };
 
     fetchWorkspaces();
-  }, [organization, token, mounted]);
+  }, [organization, token, mounted, orgsFetched, setWorkspace, setProject]);
 
   // Fetch projects
   useEffect(() => {
-    if (!workspace || workspace === '--Select--' || !mounted) {
+    if (!workspacesFetched || !mounted) return;
+    if (!workspace || workspace === '--Select--') {
+      setProjectsFetched(false);
       setProjects([]);
+      setShowProjectWarning(false);
       return;
     }
 
@@ -166,18 +217,41 @@ export default function AuthPanel({
           `${API_HTTP_URL}/projects?token=${token}&organization=${organization}&workspace=${workspace}`
         );
         const data = await response.json();
-        setProjects(data.projects || []);
+        const projectList = data.projects || [];
+        setProjects(projectList);
+        setProjectsFetched(true);
+        
+        if (projectList.length === 0) {
+          setProject('');
+          setShowProjectWarning(true);
+        } else {
+          setShowProjectWarning(false);
+        }
       } catch (error) {
         console.error('Error fetching projects:', error);
+        setProjects([]);
+        setProject('');
+        setShowProjectWarning(true);
+        setProjectsFetched(true);
       }
     };
 
     fetchProjects();
-  }, [workspace, organization, token, mounted]);
+  }, [workspace, organization, token, mounted, workspacesFetched, setProject]);
 
   if (!mounted) {
     return null;
   }
+
+  // Determine if setup is complete
+  const setupComplete = verified && (
+    (orgsFetched && organizations.length === 0) ||
+    (workspacesFetched && workspaces.length === 0) ||
+    (projectsFetched && projects.length === 0) ||
+    (organization && organization !== '--Select--' && 
+     workspace && workspace !== '--Select--' && 
+     project && project !== '--Select--')
+  );
 
   return (
     <Card className="mb-6 shadow-lg border-2 border-slate-200 dark:border-slate-700">
@@ -194,7 +268,6 @@ export default function AuthPanel({
           />
         </div>
 
-        {/* Show verification status only after debounce */}
         {token && !isVerifying && verificationMsg && (
           <Alert 
             variant={verified ? 'default' : 'destructive'}
@@ -209,7 +282,6 @@ export default function AuthPanel({
           </Alert>
         )}
 
-        {/* Show loading state while verifying */}
         {token && isVerifying && (
           <Alert className="border-slate-300 dark:border-slate-600">
             <Loader2 className="h-4 w-4 animate-spin text-slate-500" />
@@ -223,57 +295,126 @@ export default function AuthPanel({
           <>
             <div className="space-y-2">
               <Label htmlFor="organization">Organization</Label>
-              <Select value={organization} onValueChange={setOrganization}>
-                <SelectTrigger>
-                  <SelectValue placeholder="--Select--" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="--Select--">--Select--</SelectItem>
-                  {organizations.map((org) => (
-                    <SelectItem key={org} value={org}>
-                      {org}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {organization && organization !== '--Select--' && (
-              <div className="space-y-2">
-                <Label htmlFor="workspace">Workspace</Label>
-                <Select value={workspace} onValueChange={setWorkspace}>
+              {organizations.length > 0 ? (
+                <Select value={organization} onValueChange={setOrganization}>
                   <SelectTrigger>
                     <SelectValue placeholder="--Select--" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="--Select--">--Select--</SelectItem>
-                    {workspaces.map((ws) => (
-                      <SelectItem key={ws} value={ws}>
-                        {ws}
+                    {organizations.map((org) => (
+                      <SelectItem key={org} value={org}>
+                        {org}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+              ) : orgsFetched ? (
+                <Input
+                  value="No organizations available"
+                  disabled
+                  className="bg-slate-100 dark:bg-slate-800"
+                />
+              ) : (
+                <Input
+                  value="Loading..."
+                  disabled
+                  className="bg-slate-100 dark:bg-slate-800"
+                />
+              )}
+            </div>
+
+            {showOrgWarning && (
+              <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-900/20">
+                <Info className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800 dark:text-amber-300">
+                  No organizations found. You can proceed to chat with empty organization.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {orgsFetched && !showOrgWarning && organization && organization !== '--Select--' && (
+              <div className="space-y-2">
+                <Label htmlFor="workspace">Workspace</Label>
+                {workspaces.length > 0 ? (
+                  <Select value={workspace} onValueChange={setWorkspace}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="--Select--" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="--Select--">--Select--</SelectItem>
+                      {workspaces.map((ws) => (
+                        <SelectItem key={ws} value={ws}>
+                          {ws}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : workspacesFetched ? (
+                  <Input
+                    value="No workspaces available"
+                    disabled
+                    className="bg-slate-100 dark:bg-slate-800"
+                  />
+                ) : (
+                  <Input
+                    value="Loading..."
+                    disabled
+                    className="bg-slate-100 dark:bg-slate-800"
+                  />
+                )}
               </div>
             )}
 
-            {workspace && workspace !== '--Select--' && (
+            {showWorkspaceWarning && (
+              <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-900/20">
+                <Info className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800 dark:text-amber-300">
+                  No workspaces found in this organization. You can proceed to chat with empty workspace.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {workspacesFetched && !showWorkspaceWarning && workspace && workspace !== '--Select--' && (
               <div className="space-y-2">
                 <Label htmlFor="project">Project</Label>
-                <Select value={project} onValueChange={setProject}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="--Select--" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="--Select--">--Select--</SelectItem>
-                    {projects.map((proj) => (
-                      <SelectItem key={proj} value={proj}>
-                        {proj}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {projects.length > 0 ? (
+                  <Select value={project} onValueChange={setProject}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="--Select--" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="--Select--">--Select--</SelectItem>
+                      {projects.map((proj) => (
+                        <SelectItem key={proj} value={proj}>
+                          {proj}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : projectsFetched ? (
+                  <Input
+                    value="No projects available"
+                    disabled
+                    className="bg-slate-100 dark:bg-slate-800"
+                  />
+                ) : (
+                  <Input
+                    value="Loading..."
+                    disabled
+                    className="bg-slate-100 dark:bg-slate-800"
+                  />
+                )}
               </div>
+            )}
+
+            {showProjectWarning && (
+              <Alert className="border-amber-300 bg-amber-50 dark:bg-amber-900/20">
+                <Info className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-800 dark:text-amber-300">
+                  No projects found in this workspace. You can proceed to chat with empty project.
+                </AlertDescription>
+              </Alert>
             )}
           </>
         )}

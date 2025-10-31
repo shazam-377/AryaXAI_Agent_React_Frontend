@@ -105,9 +105,9 @@ export default function ChatInterface({
       const payload = {
         message: inputValue,
         details: {
-          organization,
-          workspace,
-          project,
+          organization: organization || '',
+          workspace: workspace || '',
+          project: project || '',
           token,
         },
       };
